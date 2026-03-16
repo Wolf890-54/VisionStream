@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisionStream — IPTV Quest Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080c12;--surface:#0e1420;--panel:#121a28;
+    --border:rgba(100,160,220,0.12);--border-hover:rgba(100,160,220,0.28);
+    --accent:#7eb8d4;--accent2:#8fa8c8;--accent3:#6ec4a0;
+    --accent-glow:rgba(126,184,212,0.22);
+    --text:#c8d8e8;--muted:#4e6070;
+    --screen-w:85vw;--screen-h:52vh;
+    --screen-color:#05080f;--screen-border:#7eb8d4;
+    --glow:rgba(126,184,212,0.28);--tilt:0deg;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  .env-cinema{--env-bg:radial-gradient(ellipse at 50% 120%,#0d1825 0%,#080c12 65%);}
+  .env-space{--env-bg:radial-gradient(ellipse at 50% 50%,#090a14 0%,#04050e 100%);}
+  .env-forest{--env-bg:radial-gradient(ellipse at 50% 120%,#091510 0%,#080c12 65%);}
+  .env-desert{--env-bg:radial-gradient(ellipse at 50% 120%,#151008 0%,#0a0806 65%);}
+  .env-ocean{--env-bg:radial-gradient(ellipse at 50% 120%,#071622 0%,#060b10 65%);}
+  .env-dark{--env-bg:radial-gradient(ellipse at 50% 120%,#0a0a0a 0%,#050505 65%);}
+  #app{min-height:100vh;background:var(--env-bg,var(--bg));transition:background 1.2s ease;}
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0;transition:opacity 1.2s;}
+  .env-space .stars{opacity:1;}
+  .star{position:absolute;width:2px;height:2px;background:rgba(200,220,255,0.7);border-radius:50%;animation:twinkle var(--d,3s) infinite;}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.8}}
+  .floor{position:fixed;bottom:0;left:0;right:0;height:32vh;pointer-events:none;z-index:1;background:linear-gradient(to top,rgba(126,184,212,.03),transparent);}
+  .floor::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(126,184,212,.05) 0,transparent 1px,transparent 70px,rgba(126,184,212,.05) 71px),repeating-linear-gradient(0deg,rgba(126,184,212,.05) 0,transparent 1px,transparent 70px,rgba(126,184,212,.05) 71px);transform:perspective(320px) rotateX(62deg);transform-origin:bottom;}
+  #main-layout{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:14px;gap:14px;}
+  .topbar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:rgba(14,20,32,.92);border:1px solid var(--border);border-radius:16px;backdrop-filter:blur(24px);}
+  .logo{font-family:'Orbitron',sans-serif;font-size:1.15rem;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .topbar-center{display:flex;gap:6px;}
+  .tab-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:.8rem;cursor:pointer;transition:all .2s;}
+  .tab-btn.active,.tab-btn:hover{background:rgba(126,184,212,.12);border-color:var(--accent);color:var(--accent);}
+  .topbar-right{display:flex;gap:8px;align-items:center;}
+  .status-bar{display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--muted);}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .4s;}
+  .status-dot.connected{background:var(--accent3);box-shadow:0 0 7px var(--accent3);}
+  .icon-btn{width:33px;height:33px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.88rem;transition:all .2s;}
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-glow);}
+  .content-area{width:100%;display:flex;gap:14px;flex:1;}
+  .sidebar{width:228px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;}
+  .panel{background:rgba(14,20,32,.92);border:1px solid var(--border);border-radius:16px;backdrop-filter:blur(24px);overflow:hidden;}
+  .panel-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:1.4px;}
+  .panel-header .ph-icon{color:var(--accent);font-size:.82rem;}
+  .login-form{padding:14px;display:flex;flex-direction:column;gap:9px;}
+  .input-group{display:flex;flex-direction:column;gap:3px;}
+  .input-group label{font-size:.68rem;color:var(--muted);font-weight:500;letter-spacing:.4px;}
+  .input-group input{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:7px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:.8rem;outline:none;transition:border-color .2s;}
+  .input-group input:focus{border-color:var(--accent);}
+  .btn-connect{width:100%;padding:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:9px;color:#08111e;font-family:'Inter',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:opacity .2s;letter-spacing:.4px;}
+  .btn-connect:hover{opacity:.88;}
+  .cat-list{padding:7px;display:flex;flex-direction:column;gap:2px;max-height:185px;overflow-y:auto;}
+  .cat-item{padding:7px 11px;border-radius:8px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:space-between;transition:all .15s;color:var(--muted);}
+  .cat-item:hover,.cat-item.active{background:rgba(126,184,212,.1);color:var(--accent);}
+  .cat-count{font-size:.65rem;background:rgba(126,184,212,.14);color:var(--accent);padding:2px 7px;border-radius:10px;}
+  .channel-list{padding:7px;display:flex;flex-direction:column;gap:2px;max-height:250px;overflow-y:auto;}
+  .channel-item{padding:7px 9px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:all .15s;border:1px solid transparent;}
+  .channel-item:hover{background:rgba(255,255,255,.03);border-color:var(--border);}
+  .channel-item.active{background:rgba(126,184,212,.09);border-color:rgba(126,184,212,.28);}
+  .ch-logo{width:30px;height:30px;border-radius:6px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:.92rem;flex-shrink:0;border:1px solid var(--border);}
+  .ch-info{flex:1;min-width:0;}
+  .ch-name{font-size:.78rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ch-cat{font-size:.66rem;color:var(--muted);margin-top:1px;}
+  .live-dot{width:5px;height:5px;border-radius:50%;background:#e05555;animation:pdot 1.6s infinite;flex-shrink:0;}
+  @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+  .screen-area{flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;}
+  .screen-wrapper{width:100%;display:flex;align-items:center;justify-content:center;perspective:1500px;padding:14px 0;}
+  .vr-screen{width:var(--screen-w);height:var(--screen-h);background:var(--screen-color);border-radius:14px;border:2px solid var(--screen-border);box-shadow:0 0 36px var(--glow),0 0 70px rgba(126,184,212,.06),inset 0 0 50px rgba(0,0,0,.85);position:relative;overflow:hidden;transform:rotateX(var(--tilt));transition:width .4s,height .4s,border-color .5s,box-shadow .5s,transform .35s;cursor:pointer;}
+  .vr-screen::before{content:'';position:absolute;top:0;left:0;right:0;height:38%;background:linear-gradient(to bottom,rgba(255,255,255,.03),transparent);pointer-events:none;z-index:5;border-radius:12px 12px 0 0;}
+  .vr-screen::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px);pointer-events:none;z-index:4;}
+  .screen-content{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+  .idle-screen{display:flex;flex-direction:column;align-items:center;gap:14px;color:rgba(200,216,232,.18);}
+  .idle-icon{font-size:3.8rem;}
+  .idle-text{font-family:'Orbitron',sans-serif;font-size:.82rem;letter-spacing:5px;}
+  .playing-screen{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  .channel-display{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .now-logo{font-size:3.8rem;}
+  .now-name{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:700;color:rgba(220,235,248,.92);text-shadow:0 0 28px var(--accent);}
+  .now-sub{font-size:.78rem;color:rgba(200,216,232,.38);}
+  .screen-stand{width:3px;height:24px;background:linear-gradient(to bottom,var(--screen-border),transparent);margin:0 auto;opacity:.35;}
+  .screen-base{width:100px;height:4px;background:linear-gradient(to right,transparent,var(--screen-border),transparent);margin:0 auto;border-radius:3px;opacity:.22;}
+  .screen-controls{width:100%;padding:11px 16px;background:rgba(14,20,32,.92);border:1px solid var(--border);border-radius:14px;backdrop-filter:blur(24px);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .ctrl-group{display:flex;align-items:center;gap:7px;padding-left:10px;border-left:1px solid var(--border);}
+  .ctrl-group:first-child{border-left:none;padding-left:0;}
+  .ctrl-label{font-size:.66rem;color:var(--muted);white-space:nowrap;font-weight:500;letter-spacing:.3px;}
+  .ctrl-value{font-size:.75rem;color:var(--accent);font-weight:600;min-width:28px;}
+  input[type=range]{-webkit-appearance:none;height:3px;background:rgba(200,220,240,.1);border-radius:2px;outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);}
+  .w90{width:90px}.w70{width:70px}
+  .play-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--accent);background:rgba(126,184,212,.1);color:var(--accent);font-size:.92rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+  .play-btn:hover{background:rgba(126,184,212,.24);transform:scale(1.08);}
+  select.ctrl-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:7px;font-family:'Inter',sans-serif;font-size:.77rem;outline:none;cursor:pointer;}
+  select.ctrl-sel option{background:#0e1420;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(5,8,15,.75);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#0e1825;border:1px solid var(--border);border-radius:20px;padding:24px;width:420px;max-width:94vw;box-shadow:0 0 60px rgba(126,184,212,.12);}
+  .modal-title{font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:2px;margin-bottom:4px;}
+  .modal-sub{font-size:.74rem;color:var(--muted);margin-bottom:20px;}
+  .player-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+  .player-card{padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px;}
+  .player-card:hover,.player-card.selected{background:rgba(126,184,212,.1);border-color:var(--accent);}
+  .player-card .pi{font-size:2rem;}
+  .player-card .pn{font-size:.8rem;font-weight:600;color:var(--text);}
+  .player-card .pd{font-size:.68rem;color:var(--muted);line-height:1.35;}
+  .player-card.selected .pn{color:var(--accent);}
+  .player-badge{display:inline-block;font-size:.6rem;padding:2px 7px;border-radius:8px;margin-top:2px;font-weight:600;}
+  .badge-builtin{background:rgba(126,184,212,.18);color:var(--accent);}
+  .badge-ext{background:rgba(110,196,160,.18);color:var(--accent3);}
+  .badge-vlc{background:rgba(245,158,11,.18);color:#f59e0b;}
+  .badge-mx{background:rgba(129,140,248,.18);color:var(--accent2);}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;}
+  .btn-cancel{padding:8px 20px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Inter',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;}
+  .btn-cancel:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-apply{padding:8px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#08111e;font-family:'Inter',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
+  .btn-apply:hover{opacity:.88;}
+  .current-player-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(126,184,212,.08);border:1px solid rgba(126,184,212,.18);border-radius:9px;font-size:.75rem;cursor:pointer;transition:all .2s;}
+  .current-player-bar:hover{background:rgba(126,184,212,.14);}
+  .cpb-icon{font-size:1rem;}
+  .cpb-label{color:var(--muted);}
+  .cpb-value{color:var(--accent);font-weight:600;}
+  .cpb-change{margin-left:auto;font-size:.68rem;color:var(--muted);text-decoration:underline;}
+  .epg-strip{padding:8px;display:flex;gap:6px;overflow-x:auto;}
+  .epg-item{flex-shrink:0;width:130px;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.025);cursor:pointer;transition:all .15s;}
+  .epg-item.current{border-color:var(--accent);background:rgba(126,184,212,.09);}
+  .epg-time{font-size:.66rem;color:var(--accent);font-family:'Orbitron',sans-serif;}
+  .epg-prog{font-size:.72rem;margin-top:3px;line-height:1.3;color:var(--text);}
+  .epg-progress{height:2px;background:rgba(255,255,255,.08);border-radius:1px;margin-top:6px;}
+  .epg-fill{height:100%;border-radius:1px;background:var(--accent);}
+  .vod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;padding:11px;max-height:310px;overflow-y:auto;}
+  .vod-card{border-radius:9px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all .2s;background:var(--panel);}
+  .vod-card:hover{transform:scale(1.04);border-color:var(--accent);}
+  .vod-thumb{height:72px;display:flex;align-items:center;justify-content:center;font-size:2.3rem;background:linear-gradient(135deg,#111a28,#0d1420);}
+  .vod-title{padding:5px;font-size:.69rem;text-align:center;color:var(--muted);}
+  .right-panel{width:212px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;}
+  .env-grid{padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .env-btn{padding:9px 5px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.025);color:var(--muted);font-family:'Inter',sans-serif;font-size:.73rem;cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .env-btn .ei{font-size:1.25rem;}
+  .env-btn:hover,.env-btn.active{background:rgba(126,184,212,.1);border-color:var(--accent);color:var(--accent);}
+  .theme-grid{padding:9px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .theme-dot{width:100%;aspect-ratio:1;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+  .theme-dot.active,.theme-dot:hover{border-color:rgba(255,255,255,.7);transform:scale(1.14);}
+  .shape-grid{padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .shape-btn{padding:7px;border-radius:7px;border:1px solid var(--border);background:rgba(255,255,255,.025);color:var(--muted);font-family:'Inter',sans-serif;font-size:.72rem;cursor:pointer;transition:all .2s;text-align:center;}
+  .shape-btn.active,.shape-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(126,184,212,.09);}
+  .tab-content{display:none;}.tab-content.active{display:flex;}
+  .toast{position:fixed;bottom:18px;right:18px;background:rgba(14,20,32,.97);border:1px solid var(--accent);border-radius:11px;padding:10px 17px;font-size:.8rem;color:var(--accent);z-index:300;transform:translateX(220%);transition:transform .3s;backdrop-filter:blur(20px);box-shadow:0 0 18px var(--glow);}
+  .toast.show{transform:translateX(0);}
+  ::-webkit-scrollbar{width:3px;height:3px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  @media(max-width:1100px){.right-panel{display:none}:root{--screen-w:90vw}}
+  @media(max-width:768px){.sidebar{display:none}:root{--screen-w:96vw;--screen-h:44vh}}
+</style>
+</head>
+<body>
+<div id="app" class="env-cinema">
+  <div class="stars" id="stars"></div>
+  <div class="floor"></div>
+  <div id="main-layout">
+    <div class="topbar">
+      <div class="logo">VISION<span style="color:var(--accent2)">STREAM</span></div>
+      <div class="topbar-center">
+        <button class="tab-btn active" onclick="switchTab('live',this)">📡 Live TV</button>
+        <button class="tab-btn" onclick="switchTab('vod',this)">🎬 Movies</button>
+        <button class="tab-btn" onclick="switchTab('series',this)">📺 Series</button>
+      </div>
+      <div class="topbar-right">
+        <div class="status-bar">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Disconnected</span>
+        </div>
+        <div class="icon-btn">🔍</div>
+        <div class="icon-btn">⚙️</div>
+      </div>
+    </div>
+    <div class="content-area">
+      <div class="sidebar">
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">🔗</span> Server Connection</div>
+          <div class="login-form">
+            <div class="input-group"><label>Server URL</label><input type="text" id="serverUrl" value="http://demo.xtream.tv"></div>
+            <div class="input-group"><label>Username</label><input type="text" id="username" value="demo"></div>
+            <div class="input-group"><label>Password</label><input type="password" id="password" value="demo"></div>
+            <button class="btn-connect" onclick="connect()">⚡ Connect</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">📂</span> Categories</div>
+          <div class="cat-list">
+            <div class="cat-item active" data-cat="all" onclick="selectCat('all',this)">All Channels <span class="cat-count">17</span></div>
+            <div class="cat-item" data-cat="sports" onclick="selectCat('sports',this)">⚽ Sports <span class="cat-count">4</span></div>
+            <div class="cat-item" data-cat="news" onclick="selectCat('news',this)">📰 News <span class="cat-count">4</span></div>
+            <div class="cat-item" data-cat="movies" onclick="selectCat('movies',this)">🎬 Movies <span class="cat-count">3</span></div>
+            <div class="cat-item" data-cat="kids" onclick="selectCat('kids',this)">🧸 Kids <span class="cat-count">2</span></div>
+            <div class="cat-item" data-cat="music" onclick="selectCat('music',this)">🎵 Music <span class="cat-count">2</span></div>
+            <div class="cat-item" data-cat="doc" onclick="selectCat('doc',this)">🎥 Documentary <span class="cat-count">2</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">📡</span> Channels</div>
+          <div class="channel-list" id="channelList"></div>
+        </div>
+      </div>
+      <div class="screen-area">
+        <div class="tab-content active" id="tab-live" style="flex-direction:column;align-items:center;width:100%;gap:10px;">
+          <div class="current-player-bar" onclick="openPlayerModal()" style="width:100%;max-width:620px;">
+            <span class="cpb-icon" id="cpbIcon">🎬</span>
+            <span class="cpb-label">Player:</span>
+            <span class="cpb-value" id="cpbValue">Built-in Player</span>
+            <span class="cpb-change">Change →</span>
+          </div>
+          <div class="screen-wrapper">
+            <div class="vr-screen" id="vrScreen" onclick="togglePlay()">
+              <div class="screen-content">
+                <div class="idle-screen" id="idleScreen">
+                  <div class="idle-icon">📺</div>
+                  <div class="idle-text">SELECT A CHANNEL</div>
+                </div>
+                <div class="playing-screen" id="playingScreen" style="display:none">
+                  <div class="channel-display">
+                    <div class="now-logo" id="nowLogo">⚽</div>
+                    <div class="now-name" id="nowName">Channel Name</div>
+                    <div class="now-sub" id="nowSub">● LIVE — HD</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-stand"></div>
+          <div class="screen-base"></div>
+          <div class="screen-controls">
+            <div class="ctrl-group">
+              <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+              <span>🔊</span>
+              <input type="range" class="w90" min="0" max="100" value="80" oninput="updateVol(this.value)">
+              <span class="ctrl-value" id="volVal">80</span>
+            </div>
+            <div class="ctrl-group">
+              <span class="ctrl-label">Width</span>
+              <input type="range" class="w90" min="40" max="98" value="85" oninput="updateSize(this.value)">
+              <span class="ctrl-value" id="sizeVal">85%</span>
+            </div>
+            <div class="ctrl-group">
+              <span class="ctrl-label">Height</span>
+              <input type="range" class="w90" min="28" max="80" value="52" oninput="updateHeight(this.value)">
+              <span class="ctrl-value" id="heightVal">52%</span>
+            </div>
+            <div class="ctrl-group">
+              <span class="ctrl-label">Tilt</span>
+              <input type="range" class="w70" min="-15" max="15" value="0" oninput="updateTilt(this.value)">
+            </div>
+            <div class="ctrl-group">
+              <span class="ctrl-label">Effect</span>
+              <select class="ctrl-sel" onchange="updateEffect(this.value)">
+                <option value="none">None</option>
+                <option value="glow">Glow</option>
+                <option value="cinema">Cinema</option>
+                <option value="retro">Retro</option>
+                <option value="hologram">Hologram</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel" style="width:100%">
+            <div class="panel-header"><span class="ph-icon">📅</span> Program Guide (EPG)</div>
+            <div class="epg-strip" id="epgStrip"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-vod" style="flex-direction:column;width:100%;gap:12px;">
+          <div class="panel" style="width:100%">
+            <div class="panel-header"><span class="ph-icon">🎬</span> Available Movies</div>
+            <div class="vod-grid" id="vodGrid"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-series" style="flex-direction:column;width:100%;gap:12px;">
+          <div class="panel" style="width:100%">
+            <div class="panel-header"><span class="ph-icon">📺</span> TV Series</div>
+            <div class="vod-grid" id="seriesGrid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">🌍</span> Virtual Environment</div>
+          <div class="env-grid">
+            <button class="env-btn active" onclick="setEnv('cinema',this)"><span class="ei">🎭</span>Cinema</button>
+            <button class="env-btn" onclick="setEnv('space',this)"><span class="ei">🚀</span>Space</button>
+            <button class="env-btn" onclick="setEnv('forest',this)"><span class="ei">🌲</span>Forest</button>
+            <button class="env-btn" onclick="setEnv('desert',this)"><span class="ei">🏜️</span>Desert</button>
+            <button class="env-btn" onclick="setEnv('ocean',this)"><span class="ei">🌊</span>Ocean</button>
+            <button class="env-btn" onclick="setEnv('dark',this)"><span class="ei">🌑</span>Dark</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">🎨</span> Border Color</div>
+          <div class="theme-grid" id="borderThemes">
+            <div class="theme-dot active" style="background:#7eb8d4" onclick="setScreenTheme('#7eb8d4','rgba(126,184,212,.28)',this)"></div>
+            <div class="theme-dot" style="background:#8fa8c8" onclick="setScreenTheme('#8fa8c8','rgba(143,168,200,.28)',this)"></div>
+            <div class="theme-dot" style="background:#6ec4a0" onclick="setScreenTheme('#6ec4a0','rgba(110,196,160,.28)',this)"></div>
+            <div class="theme-dot" style="background:#b8a87a" onclick="setScreenTheme('#b8a87a','rgba(184,168,122,.28)',this)"></div>
+            <div class="theme-dot" style="background:#c47a7a" onclick="setScreenTheme('#c47a7a','rgba(196,122,122,.28)',this)"></div>
+            <div class="theme-dot" style="background:#a888c8" onclick="setScreenTheme('#a888c8','rgba(168,136,200,.28)',this)"></div>
+            <div class="theme-dot" style="background:#78a898" onclick="setScreenTheme('#78a898','rgba(120,168,152,.28)',this)"></div>
+            <div class="theme-dot" style="background:#aaaaaa" onclick="setScreenTheme('#aaaaaa','rgba(170,170,170,.2)',this)"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">🖥️</span> Screen Background</div>
+          <div class="theme-grid" id="bgThemes">
+            <div class="theme-dot active" style="background:#05080f" onclick="setScreenBg('#05080f',this)"></div>
+            <div class="theme-dot" style="background:linear-gradient(135deg,#0d1420,#151e30)" onclick="setScreenBg('linear-gradient(135deg,#0d1420,#151e30)',this)"></div>
+            <div class="theme-dot" style="background:linear-gradient(135deg,#0d1510,#0a1208)" onclick="setScreenBg('linear-gradient(135deg,#0d1510,#0a1208)',this)"></div>
+            <div class="theme-dot" style="background:linear-gradient(135deg,#16100d,#100a08)" onclick="setScreenBg('linear-gradient(135deg,#16100d,#100a08)',this)"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="ph-icon">📐</span> Screen Shape</div>
+          <div class="shape-grid">
+            <button class="shape-btn active" onclick="setShape('14px',this)">Rounded</button>
+            <button class="shape-btn" onclick="setShape('28px',this)">Soft</button>
+            <button class="shape-btn" onclick="setShape('0px',this)">Sharp</button>
+            <button class="shape-btn" onclick="setShape('50px',this)">Oval</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="playerModal">
+    <div class="modal">
+      <div class="modal-title">SELECT PLAYER</div>
+      <div class="modal-sub">Choose how you want to play your streams</div>
+      <div class="player-grid">
+        <div class="player-card selected" data-player="builtin" data-icon="🎬" data-name="Built-in Player" onclick="selectPlayer(this)">
+          <div class="pi">🎬</div><div class="pn">Built-in Player</div>
+          <div class="pd">Native ExoPlayer<br>Best for Quest</div>
+          <span class="player-badge badge-builtin">RECOMMENDED</span>
+        </div>
+        <div class="player-card" data-player="vlc" data-icon="🟠" data-name="VLC for Android" onclick="selectPlayer(this)">
+          <div class="pi">🟠</div><div class="pn">VLC for Android</div>
+          <div class="pd">Open source<br>All formats</div>
+          <span class="player-badge badge-vlc">EXTERNAL</span>
+        </div>
+        <div class="player-card" data-player="mx" data-icon="🎥" data-name="MX Player" onclick="selectPlayer(this)">
+          <div class="pi">🎥</div><div class="pn">MX Player</div>
+          <div class="pd">Hardware decode<br>Multi-format</div>
+          <span class="player-badge badge-mx">EXTERNAL</span>
+        </div>
+        <div class="player-card" data-player="just" data-icon="▶️" data-name="Just Player" onclick="selectPlayer(this)">
+          <div class="pi">▶️</div><div class="pn">Just Player</div>
+          <div class="pd">Lightweight<br>IPTV focused</div>
+          <span class="player-badge badge-ext">EXTERNAL</span>
+        </div>
+        <div class="player-card" data-player="nova" data-icon="🌟" data-name="Nova Video Player" onclick="selectPlayer(this)">
+          <div class="pi">🌟</div><div class="pn">Nova Video</div>
+          <div class="pd">4K / HDR<br>DTS / Dolby</div>
+          <span class="player-badge badge-ext">EXTERNAL</span>
+        </div>
+        <div class="player-card" data-player="perfect" data-icon="💠" data-name="Perfect Player" onclick="selectPlayer(this)">
+          <div class="pi">💠</div><div class="pn">Perfect Player</div>
+          <div class="pd">IPTV & EPG<br>STB emulator</div>
+          <span class="player-badge badge-ext">EXTERNAL</span>
+        </div>
+      </div>
+      <div id="intentNote" style="display:none;font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:14px;line-height:1.5;">
+        ⚠️ This player uses an <strong style="color:var(--accent)">Android Intent</strong>. Make sure the app is installed on your Quest device.
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closePlayerModal()">Cancel</button>
+        <button class="btn-apply" onclick="applyPlayer()">Apply</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+const channels=[
+  {id:1,name:'beIN Sports 1',cat:'sports',icon:'⚽',color:'#1a237e'},
+  {id:2,name:'beIN Sports 2',cat:'sports',icon:'🏀',color:'#1a237e'},
+  {id:3,name:'SSC Sport 1',cat:'sports',icon:'🏆',color:'#7f1010'},
+  {id:4,name:'ESPN',cat:'sports',icon:'🎽',color:'#7a2800'},
+  {id:5,name:'Al Jazeera',cat:'news',icon:'📰',color:'#1b3e20'},
+  {id:6,name:'Al Arabiya',cat:'news',icon:'🌍',color:'#7a2800'},
+  {id:7,name:'BBC News',cat:'news',icon:'📡',color:'#7f1010'},
+  {id:8,name:'CNN',cat:'news',icon:'🗞️',color:'#6a1010'},
+  {id:9,name:'MBC 1',cat:'movies',icon:'🎬',color:'#3a1060'},
+  {id:10,name:'MBC 2',cat:'movies',icon:'🎥',color:'#3a1060'},
+  {id:11,name:'Rotana Cinema',cat:'movies',icon:'🎞️',color:'#6a0835'},
+  {id:12,name:'Cartoon Network',cat:'kids',icon:'🧸',color:'#7a5000'},
+  {id:13,name:'Spacetoon',cat:'kids',icon:'🚀',color:'#0a4060'},
+  {id:14,name:'Rotana Music',cat:'music',icon:'🎵',color:'#004040'},
+  {id:15,name:'MTV',cat:'music',icon:'🎸',color:'#6a0835'},
+  {id:16,name:'Nat Geo',cat:'doc',icon:'🌿',color:'#1b3e20'},
+  {id:17,name:'Discovery',cat:'doc',icon:'🔭',color:'#003428'},
+];
+const epgData=[
+  {time:'20:00',prog:'Match: Al Hilal vs Al Ittihad',pct:65},
+  {time:'22:00',prog:'Post Match Analysis',pct:0},
+  {time:'23:00',prog:'UCL Highlights',pct:0},
+  {time:'00:00',prog:'Late Night Coverage',pct:0},
+  {time:'01:00',prog:'Sports Rewind',pct:0},
+];
+const vods=[
+  {t:'Inception',icon:'🌀'},{t:'The Matrix',icon:'💊'},{t:'Interstellar',icon:'🚀'},
+  {t:'Avatar',icon:'🌿'},{t:'Top Gun',icon:'✈️'},{t:'Dune',icon:'🏜️'},
+  {t:'The Batman',icon:'🦇'},{t:'Oppenheimer',icon:'💥'},{t:'Barbie',icon:'💗'},{t:'Wonka',icon:'🍫'},
+];
+const series=[
+  {t:'Breaking Bad',icon:'⚗️'},{t:'Game of Thrones',icon:'🐉'},{t:'Stranger Things',icon:'🌀'},
+  {t:'The Crown',icon:'👑'},{t:'Black Mirror',icon:'📱'},{t:'Peaky Blinders',icon:'🎩'},
+  {t:'Squid Game',icon:'🎮'},{t:'Wednesday',icon:'🖤'},
+];
+let playing=false,currentChannel=null;
+let selectedPlayer={id:'builtin',icon:'🎬',name:'Built-in Player'};
+let pendingPlayer=null;
+window.onload=()=>{
+  renderChannels('all');renderEPG();
+  renderCards('vodGrid',vods);renderCards('seriesGrid',series);
+  createStars();
+};
+function createStars(){
+  const c=document.getElementById('stars');
+  for(let i=0;i<180;i++){
+    const s=document.createElement('div');s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*4}s`;
+    c.appendChild(s);
+  }
+}
+function catLabel(c){return{sports:'Sports',news:'News',movies:'Movies',kids:'Kids',music:'Music',doc:'Documentary'}[c]||c;}
+function renderChannels(cat){
+  const f=cat==='all'?channels:channels.filter(c=>c.cat===cat);
+  document.getElementById('channelList').innerHTML=f.map(ch=>`
+    <div class="channel-item ${currentChannel?.id===ch.id?'active':''}" onclick="selectChannel(${ch.id})">
+      <div class="ch-logo" style="background:${ch.color}40;border-color:${ch.color}60">${ch.icon}</div>
+      <div class="ch-info"><div class="ch-name">${ch.name}</div><div class="ch-cat">${catLabel(ch.cat)}</div></div>
+      <div class="live-dot"></div>
+    </div>`).join('');
+}
+function renderEPG(){
+  document.getElementById('epgStrip').innerHTML=epgData.map((e,i)=>`
+    <div class="epg-item ${i===0?'current':''}">
+      <div class="epg-time">${e.time}</div><div class="epg-prog">${e.prog}</div>
+      <div class="epg-progress"><div class="epg-fill" style="width:${e.pct}%"></div></div>
+    </div>`).join('');
+}
+function renderCards(id,arr){
+  document.getElementById(id).innerHTML=arr.map(v=>`
+    <div class="vod-card" onclick="showToast('Loading: ${v.t}')">
+      <div class="vod-thumb">${v.icon}</div><div class="vod-title">${v.t}</div>
+    </div>`).join('');
+}
+function connect(){
+  const url=document.getElementById('serverUrl').value.trim();
+  const user=document.getElementById('username').value.trim();
+  if(!url||!user){showToast('⚠️ Please fill in connection details');return;}
+  showToast('⏳ Connecting...');
+  setTimeout(()=>{
+    document.getElementById('statusDot').classList.add('connected');
+    document.getElementById('statusText').textContent='Connected';
+    showToast('✅ Connected successfully!');
+  },1500);
+}
+function selectChannel(id){
+  currentChannel=channels.find(c=>c.id===id);
+  renderChannels(document.querySelector('.cat-item.active')?.dataset?.cat||'all');
+  document.getElementById('idleScreen').style.display='none';
+  document.getElementById('playingScreen').style.display='flex';
+  document.getElementById('nowLogo').textContent=currentChannel.icon;
+  document.getElementById('nowName').textContent=currentChannel.name;
+  document.getElementById('nowSub').textContent='● LIVE — HD  |  '+selectedPlayer.name;
+  document.getElementById('playBtn').textContent='⏸';
+  playing=true;
+  showToast('▶ Now Playing: '+currentChannel.name);
+}
+function selectCat(cat,el){
+  document.querySelectorAll('.cat-item').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  renderChannels(cat);
+}
+function togglePlay(){
+  if(!currentChannel)return;
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'⏸':'▶';
+  document.getElementById('nowSub').textContent=playing?'● LIVE — HD  |  '+selectedPlayer.name:'⏸ Paused';
+}
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+function updateSize(v){document.documentElement.style.setProperty('--screen-w',v+'vw');document.getElementById('sizeVal').textContent=v+'%';}
+function updateHeight(v){document.documentElement.style.setProperty('--screen-h',v+'vh');document.getElementById('heightVal').textContent=v+'%';}
+function updateTilt(v){document.documentElement.style.setProperty('--tilt',v+'deg');}
+function updateVol(v){document.getElementById('volVal').textContent=v;}
+function updateEffect(v){
+  document.getElementById('vrScreen').style.filter={
+    none:'',glow:'brightness(1.12) saturate(1.3)',
+    retro:'sepia(.45) contrast(1.18) brightness(.92)',
+    hologram:'hue-rotate(180deg) brightness(1.15) saturate(1.8)',
+    cinema:'contrast(1.1) brightness(.96)'
+  }[v]||'';
+}
+function setEnv(env,btn){
+  document.getElementById('app').className='env-'+env;
+  document.querySelectorAll('.env-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const t={
+    cinema:{a:'#7eb8d4',g:'rgba(126,184,212,.28)'},
+    space:{a:'#8fa8c8',g:'rgba(143,168,200,.28)'},
+    forest:{a:'#6ec4a0',g:'rgba(110,196,160,.28)'},
+    desert:{a:'#c4a870',g:'rgba(196,168,112,.28)'},
+    ocean:{a:'#68b8c8',g:'rgba(104,184,200,.28)'},
+    dark:{a:'#607080',g:'rgba(96,112,128,.2)'},
+  }[env]||{a:'#7eb8d4',g:'rgba(126,184,212,.28)'};
+  document.documentElement.style.setProperty('--accent',t.a);
+  document.documentElement.style.setProperty('--glow',t.g);
+  document.documentElement.style.setProperty('--screen-border',t.a);
+}
+function setScreenTheme(color,glow,btn){
+  document.documentElement.style.setProperty('--screen-border',color);
+  document.documentElement.style.setProperty('--glow',glow);
+  document.querySelectorAll('#borderThemes .theme-dot').forEach(d=>d.classList.remove('active'));
+  btn.classList.add('active');
+}
+function setScreenBg(color,btn){
+  document.getElementById('vrScreen').style.background=color;
+  document.querySelectorAll('#bgThemes .theme-dot').forEach(d=>d.classList.remove('active'));
+  btn.classList.add('active');
+}
+function setShape(r,btn){
+  document.getElementById('vrScreen').style.borderRadius=r;
+  document.querySelectorAll('.shape-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function openPlayerModal(){
+  pendingPlayer=null;
+  document.querySelectorAll('.player-card').forEach(c=>{
+    c.classList.toggle('selected',c.dataset.player===selectedPlayer.id);
+  });
+  document.getElementById('intentNote').style.display='none';
+  document.getElementById('playerModal').classList.add('open');
+}
+function closePlayerModal(){document.getElementById('playerModal').classList.remove('open');}
+function selectPlayer(card){
+  document.querySelectorAll('.player-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  pendingPlayer={id:card.dataset.player,icon:card.dataset.icon,name:card.dataset.name};
+  document.getElementById('intentNote').style.display=card.dataset.player!=='builtin'?'block':'none';
+}
+function applyPlayer(){
+  if(pendingPlayer)selectedPlayer=pendingPlayer;
+  document.getElementById('cpbIcon').textContent=selectedPlayer.icon;
+  document.getElementById('cpbValue').textContent=selectedPlayer.name;
+  if(currentChannel)document.getElementById('nowSub').textContent='● LIVE — HD  |  '+selectedPlayer.name;
+  closePlayerModal();
+  showToast('✅ Player set to: '+selectedPlayer.name);
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2700);
+}
+</script>
+</body>
+</html>
